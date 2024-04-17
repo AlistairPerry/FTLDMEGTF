@@ -6,139 +6,106 @@ Created on Wed Sep  7 13:05:40 2022
 @author: alistairperry
 """
 
-
-'''
-
-Setup
-
-'''
+#%% Setup
 
 # Import libraries
-
 import os
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import statannot
 
+# Third-party libraries
+import statannot
 import ptitprince as pt
 
+## DIRECTORIES
 
+# Base dir
+path_to_basedir = "/Users/alistairperry/Documents/Cambridge/Project_2"
 
-#Output Dir
+# Output dir
+OUTDIR = os.path.join(path_to_basedir,  "Fix_T1cor/TF/C_Plots")
 
-OutDir = "/Users/alistairperry/Documents/Cambridge/Project_2/Fix_T1cor/TF/C_Plots/"
+## Load dataframes
 
+# Beta1 - condition modulation
+df = pd.read_csv(os.path.join(path_to_basedir, "Fix_T1cor/TF/B_Data/adv_ssst_newmaxf_fixICA_wfids_250_noTGBcon_FullDiffPowTable.csv"))
 
-#Load Data
+# Beta1 - single condition
+df_bothreps = pd.read_csv(os.path.join(path_to_basedir, "Fix_T1cor/TF/B_Data/adv_ssst_newmaxf_fixICA_wfids_250_noTGBcon_FullPowCondTable_ConsPats.csv"))
 
-df = pd.read_csv("/Users/alistairperry/Documents/Cambridge/Project_2/Fix_T1cor/TF/B_Data/adv_ssst_newmaxf_fixICA_wfids_250_noTGBcon_FullDiffPowTable.csv")
-
-df_bothreps = pd.read_csv("/Users/alistairperry/Documents/Cambridge/Project_2/Fix_T1cor/TF/B_Data/adv_ssst_newmaxf_fixICA_wfids_250_noTGBcon_FullPowCondTable_ConsPats.csv")
-
+# Beta 1 - all trial reps
 df_allreps = pd.read_csv("/Users/alistairperry/Documents/Cambridge/Project_2/Fix_T1cor/TF/B_Data/adv_ssst_newmaxf_fixICA_wfids_250_FullPowCondTable_ConsPats_allreps.csv")
 
+# High beta (22-30hz)
 df_beta2 = pd.read_csv("/Users/alistairperry/Documents/Cambridge/Project_2/Fix_T1cor/TF/B_Data/adv_ssst_newmaxf_fixICA_wfids_250_noTGBcon_FullDiffPowTable_hbeta.csv")
 
+# Evoked beta
 df_evo = pd.read_csv("/Users/alistairperry/Documents/Cambridge/Project_2/Fix_T1cor/TF/B_Data/adv_ssst_newmaxf_fixICA_wfids_250_EVOnew_noTGBcon_FullDiffPowTable.csv")
 
-
-#Remove doubles straight away
+# Remove repeated patients from their analysis
 df = df.loc[df['double']==0] 
 
 df_allreps = df_allreps.loc[df_allreps['double']==0]
 
-
-#Separate table for cons
-
+# Filter table for controls
 df_cons = df.loc[df['Con_Pat']==1]
-
-df_cons = df_cons.drop('ID', axis=1)
-
-df_cons['ID'] = df_cons.index
-
-
 df_bothreps_cons = df_bothreps.loc[df_bothreps['Con_Pat']==1]
 
+# Fix index in df
+df_cons = df_cons.drop('ID', axis=1)
+df_cons['ID'] = df_cons.index
 
-
-
+# Regions of interest
 regions = ["LIFG", "LSTG", "LAUD", "RIFG", "RSTG", "RAUD"]
-
 reg_labs = ["L IFG", "L STG", "L AUD", "R IFG", "R STG", "R AUD"]
 
-
-# Group colours
-
+# Group colours for plotting
 pal = ["#3498db", "#E69F00", "#00BA38"]
 
 
-'''
+#%% Functions
 
-Dep T Test [RIFG]
-
-'''
-
-
-#Robustness across control populations
 
 from scipy.stats import ttest_ind
 
-# tgb_con = df_cons.loc[df_cons['Study']==1]
-# mem_con = df_cons.loc[df_cons['Study']==2]
-
-# ttest_ind(tgb_con['RIFG'], mem_con['RIFG'])
-
-# ax = sns.boxplot(x="Study", y="RIFG", data=df_cons, color="blue")
-
-# ax = sns.swarmplot(x="Study", y="RIFG", data=df_cons, color=".25")
-
-# # adding transparency to colors
-# for patch in ax.patches:
-#  r, g, b, a = patch.get_facecolor()
-#  patch.set_facecolor((r, g, b, .7))
- 
-# plt.show()
-
 
 #Paired T-Test
-
-
 def PairedCondTest(df, regions):
     
     
     from scipy.stats import ttest_rel    
 
-    
     t_all = []
     p_all = []
-    
     
     for ind, reg in enumerate(regions):
         
         IV_std = ''.join([reg, "_Std"])
         IV_dev = ''.join([reg, "_Dev"])
         
-        
+        # Perform t-test
         res = ttest_rel(df[IV_std], df[IV_dev])
         
+        # Add stats to lists
         t_all.append(res[0])
         p_all.append(res[1])
         
     
     #Combine into output df    
-    
     stats_df = np.stack((np.array(t_all), np.array(p_all)), axis=1)
     
     stats_output = pd.DataFrame(stats_df, index = regions, columns=["t", "p"])
 
     return stats_output
-        
+
+
+
         
 stats_output = PairedCondTest(df_bothreps_cons, regions)
 
-stats_output.to_csv(path_or_buf=OutDir + "TF_PairedCondTests.csv", sep=',')
+stats_output.to_csv(path_or_buf=OUTDIR + "TF_PairedCondTests.csv", sep=',')
 
 #RM ANOVA
 
@@ -201,7 +168,7 @@ def withincond_plot(region):
     plt.yticks(weight = 'bold', size = 24)
     
     
-    plt.savefig(os.path.join(OutDir, f"TFcon_conddiff_{region}.tif"))
+    plt.savefig(os.path.join(OUTDIR, f"TFcon_conddiff_{region}.tif"))
     
 
 for ind, reg in enumerate(regions):
@@ -245,7 +212,7 @@ ax.spines.top.set_visible(False)
 
 plt.tight_layout()
 
-plt.savefig(os.path.join(OutDir, "TFcon_conddiff_RIFG_sing.tif"))
+plt.savefig(os.path.join(OUTDIR, "TFcon_conddiff_RIFG_sing.tif"))
     
 
 # All
@@ -276,7 +243,7 @@ ax.spines.top.set_visible(False)
     
 plt.tight_layout()
 
-plt.savefig(os.path.join(OutDir, "TFcon_conddiff_beta1_all.png"), dpi=300)
+plt.savefig(os.path.join(OUTDIR, "TFcon_conddiff_beta1_all.png"), dpi=300)
 
 '''
 
@@ -305,7 +272,7 @@ model = ols('RIFG ~ C(Diag)',data=df_nodbl).fit()
 
 table_type_1_TF = sm.stats.anova_lm(model, typ=1)
 
-table_type_1_TF.to_csv(path_or_buf=OutDir + "ANOVA_TF_3grps.csv", sep=',')
+table_type_1_TF.to_csv(path_or_buf=OUTDIR + "ANOVA_TF_3grps.csv", sep=',')
 
 
 #Post-hoc tests
@@ -319,7 +286,7 @@ print(comparison_results_TF.summary())
 
 stats = sp.posthoc_ttest(df_nodbl, val_col="RIFG", group_col="Diag", p_adjust='sidak')
 
-stats.to_csv(path_or_buf=OutDir + "ANOVA_TF_3grps_posthoctests.csv", sep=',')
+stats.to_csv(path_or_buf=OUTDIR + "ANOVA_TF_3grps_posthoctests.csv", sep=',')
 
 
 #T-values (Con vs PSP)
@@ -328,7 +295,7 @@ stats_unc = ttest_ind(df_nodbl.loc[df_nodbl['Diag'] == 2, 'RIFG'], df_nodbl.loc[
 
 
 #Print
-f = open(OutDir + "ANOVA_TF_3grps_posthoctests_unc.txt", 'w')
+f = open(OUTDIR + "ANOVA_TF_3grps_posthoctests_unc.txt", 'w')
 print(f't= {stats_unc[0]}', file=f)
 print(f'p= {stats_unc[1]}', file=f)
 f.close()
@@ -343,7 +310,7 @@ model_ancova = ols('RIFG ~ C(Diag) + Age',data=df_nodbl).fit()
 
 table_type_1_TF_ancova_Age = sm.stats.anova_lm(model_ancova, typ=1)
 
-table_type_1_TF_ancova_Age.to_csv(path_or_buf=OutDir + "ANOVA_TF_3grps_AgeCov.csv", sep=',')
+table_type_1_TF_ancova_Age.to_csv(path_or_buf=OUTDIR + "ANOVA_TF_3grps_AgeCov.csv", sep=',')
 
 
 df_nodbl['RIFG_Dev_bl_log10'] = np.log10(df_nodbl['RIFG_Dev_bl'])
@@ -359,7 +326,7 @@ model_ancova = ols('RIFG ~ C(Diag) + RIFG_Dev_bl_log10', data=df_nodbl).fit()
 
 table_type_1_TF_ancova_Devbl = sm.stats.anova_lm(model_ancova, typ=1)
 
-table_type_1_TF_ancova_Devbl.to_csv(path_or_buf=OutDir + "ANOVA_TF_3grps_DevBLCov.csv", sep=',')
+table_type_1_TF_ancova_Devbl.to_csv(path_or_buf=OUTDIR + "ANOVA_TF_3grps_DevBLCov.csv", sep=',')
 
 
 
@@ -372,12 +339,12 @@ model = ols('RIFG_Dev_bl_log10 ~ C(Diag)',data=df_nodbl).fit()
 
 table_type_1_Dev_bl = sm.stats.anova_lm(model, typ=1)
 
-table_type_1_Dev_bl.to_csv(path_or_buf=OutDir + "ANOVA_TF_Dev_bl_3grps.csv", sep=',')
+table_type_1_Dev_bl.to_csv(path_or_buf=OUTDIR + "ANOVA_TF_Dev_bl_3grps.csv", sep=',')
 
 
 stats = sp.posthoc_ttest(df_nodbl, val_col="RIFG_Dev_bl_log10", group_col="Diag", p_adjust='sidak')
 
-stats.to_csv(path_or_buf=OutDir + "ANOVA_TF_Dev_bl_3grps_posthoctests.csv", sep=',')
+stats.to_csv(path_or_buf=OUTDIR + "ANOVA_TF_Dev_bl_3grps_posthoctests.csv", sep=',')
 
 
 
@@ -489,7 +456,7 @@ ax.spines.top.set_visible(False)
 
 plt.tight_layout()
 
-plt.savefig(os.path.join(OutDir, "TFcon_3grps_RIFG.tif"), dpi=300)
+plt.savefig(os.path.join(OUTDIR, "TFcon_3grps_RIFG.tif"), dpi=300)
 
 plt.show()
 
@@ -532,7 +499,7 @@ ax.spines.top.set_visible(False)
 plt.tight_layout()
 
 # Save out
-plt.savefig(os.path.join(OutDir, "TF_allreps_3grps_py.tif"), dpi=300)
+plt.savefig(os.path.join(OUTDIR, "TF_allreps_3grps_py.tif"), dpi=300)
 plt.show()
 
 
@@ -589,7 +556,7 @@ ax.spines.top.set_visible(False)
 plt.tight_layout()
 
 # Save out
-plt.savefig(os.path.join(OutDir, "TFcon_3grps_RIFG_bldev_log10.tif"), dpi=300)
+plt.savefig(os.path.join(OUTDIR, "TFcon_3grps_RIFG_bldev_log10.tif"), dpi=300)
 plt.show()
 
 
@@ -628,7 +595,7 @@ ax.spines.top.set_visible(False)
     
 plt.tight_layout()
 
-plt.savefig(os.path.join(OutDir, "TFcon_conddiff_beta2_all.png"), dpi=300)
+plt.savefig(os.path.join(OUTDIR, "TFcon_conddiff_beta2_all.png"), dpi=300)
 
 
 """
@@ -672,7 +639,7 @@ ax.spines.top.set_visible(False)
 
 plt.tight_layout()
 
-plt.savefig(os.path.join(OutDir, "TFcon_conddiff_RIFG_sing_EVO.tif"))
+plt.savefig(os.path.join(OUTDIR, "TFcon_conddiff_RIFG_sing_EVO.tif"))
 
 # df_cons_evo_long = pd.melt(df_cons_evo, id_vars='ID', value_vars=['LIFG', 'LSTG', 'LAUD', 'RIFG', 'RSTG', 'RAUD'])
 
